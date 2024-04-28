@@ -1,8 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../components/my_button.dart';
 import '../components/my_text_button.dart';
 import '../components/my_textfield.dart';
+import '../components/utils.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -17,31 +19,7 @@ class _LoginPageState extends State<SignUpPage> {
   TextEditingController emailController = TextEditingController();
   TextEditingController usernameController = TextEditingController();
 
-  String? myValidateEmailFct(String? value) {
-    const pattern =
-        r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+";
-    final regex = RegExp(pattern);
-
-    if (value!.isEmpty) {
-      return "Email Can't be empty ";
-    } else if (!regex.hasMatch(value)) {
-      return 'Enter a valid email address';
-    }
-    return null;
-  }
-
-  String? myValidatePwdFct(String? value) {
-    const pattern = r'^(?=.*[A-Z])(?=.*?[0-9])(?=.*?[ @#\&*~]) .{8,}';
-    final regex = RegExp(pattern);
-    if (value!.isEmpty) {
-      return "Password Can't be empty ";
-    } else if (!regex.hasMatch(value)) {
-      return '''The password must be at least 8
-            characters \n and should contain at least one upper case, \n one digit,
-            one special character among (@#&*~)''';
-    }
-    return null;
-  }
+  bool isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -66,10 +44,10 @@ class _LoginPageState extends State<SignUpPage> {
                   controller: usernameController,
                   prefixIcon: const Icon(Icons.person),
                   validator: (value) {
-                    if (value==null|| value.isEmpty) {
+                    if (value == null || value.isEmpty) {
                       return 'you forgot to enter your username';
                     }
-                    if (value.length<4) {
+                    if (value.length < 4) {
                       return 'the username should be at least 4 characters';
                     }
                     return null;
@@ -103,40 +81,101 @@ class _LoginPageState extends State<SignUpPage> {
                     return null;
                   },
                 ),
-                MyButton(
-                  label: "Sign up",
-                  onPressed: () {
-                    if (myFormState.currentState!.validate()) {
-                      Navigator.of(context).pushReplacementNamed('/home');
-                    }
-                  },
-                ),
-                const SizedBox(height: 15),
-                const Text("OR"),
-                const SizedBox(height: 15),
-                MyButton(
-                  label: "Sign up with Google",
-                  onPressed: () {
-                    Navigator.of(context).pushReplacementNamed('/home');
-                  },
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text("Already have an account?"),
-                    MyTextButton(
-                      label: "Login",
-                      onPressed: () {
-                        Navigator.of(context).pushReplacementNamed('/login');
-                      },
-                    ),
-                  ],
-                ),
+                isLoading
+                    ? const LoadingWidget()
+                    : Column(
+                        children: [
+                          MyButton(
+                            label: "Sign up",
+                            onPressed: signup,
+                          ),
+                          const SizedBox(height: 15),
+                          const Text("OR"),
+                          const SizedBox(height: 15),
+                          MyButton(
+                            label: "Sign up with Google",
+                            onPressed: signupWithGoogle,
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text("Already have an account?"),
+                              MyTextButton(
+                                label: "Login",
+                                onPressed: () {
+                                  Navigator.of(context)
+                                      .pushReplacementNamed('/login');
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  signupWithGoogle() async {
+    try {
+      final firebaseAuth = FirebaseAuth.instance;
+
+      // const List<String> scopes = <String>[
+      //   'ghalemmohsen@gmail.com',
+      //   'https://www.googleapis.com/auth/contacts.readonly',
+      // ];
+
+      // GoogleSignIn googleSignIn = GoogleSignIn(
+      //   // Optional clientId
+      //   // clientId: 'your-client_id.apps.googleusercontent.com',
+      //   scopes: scopes,
+      // );
+      // await googleSignIn.signIn();
+      await firebaseAuth.signInWithProvider(GoogleAuthProvider());
+    } catch (e) {
+      if (mounted) {
+        buildSnackBar(context: context, title: e.toString());
+      }
+    }
+  }
+
+  signup() async {
+    try {
+      if (myFormState.currentState!.validate()) {
+        setState(() {
+          isLoading = true;
+        });
+        final firebaseAuth = FirebaseAuth.instance;
+        final user = await firebaseAuth.createUserWithEmailAndPassword(
+          email: emailController.text,
+          password: passwordController.text,
+        );
+        await user.user!.sendEmailVerification();
+        if (mounted) {
+          buildSnackBar(
+              context: context,
+              title: 'Please verify your email so you can login');
+          Navigator.of(context).pushReplacementNamed('/login');
+        } else {
+          throw Exception("The state isn't availlable");
+        }
+      }
+    } on FirebaseAuthException catch (error) {
+      if (mounted) {
+        buildSnackBar(
+            context: context, title: error.message ?? 'An error Occured');
+      }
+    } catch (e) {
+      if (mounted) {
+        buildSnackBar(context: context, title: e.toString());
+      }
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 }

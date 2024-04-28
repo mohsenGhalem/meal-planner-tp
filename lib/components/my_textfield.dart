@@ -30,6 +30,7 @@ class MyTextField extends StatelessWidget {
         decoration: InputDecoration(
             hintText: hintText,
             hintStyle: hintStyle,
+            errorMaxLines: 5,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30.0),
             ),

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:tp02/components/my_text_button.dart';
 import 'components/days_card.dart';
@@ -30,8 +31,10 @@ class _HomePageState extends State<HomePage> {
         actions: [
           MyTextButton(
             label: 'Sign out',
-            onPressed: () => Navigator.of(context)
-                .pushReplacementNamed('/login', arguments: {}),
+            onPressed: () {
+              FirebaseAuth.instance.signOut().then((value) =>
+                  Navigator.of(context).pushReplacementNamed('/login'));
+            },
           )
         ],
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:tp02/components/my_button.dart';
 import 'package:tp02/components/my_textfield.dart';
 import 'package:tp02/home_page.dart';
@@ -101,27 +102,7 @@ class _AddNewMealPageState extends State<AddNewMealPage> {
                   const SizedBox(height: 10),
                   MyButton(
                     label: 'Add The Meal',
-                    onPressed: () {
-                      if (myFormState.currentState!.validate()) {
-                        List<String> ingredients = List.generate(
-                            ingredientsControllers.length,
-                            (index) => ingredientsControllers[index].text);
-                        int indexofDay = days_meals.indexWhere(
-                            (element) => element.day == receivedDay);
-
-                        Meal newMeal = Meal(
-                            name: mealName.text,
-                            path: mealPath.text,
-                            listOfIngredient: ingredients);
-                        if (indexofDay != -1) {
-                          days_meals[indexofDay].meals.add(newMeal);
-                        } else {
-                          days_meals.add(
-                              DayMeals(day: receivedDay, meals: [newMeal]));
-                        }
-                        Navigator.pop(context);
-                      }
-                    },
+                    onPressed: () => addMeal(receivedDay),
                   ),
                 ],
               ),
@@ -130,5 +111,23 @@ class _AddNewMealPageState extends State<AddNewMealPage> {
         ),
       ),
     );
+  }
+
+  addMeal(String receivedDay) {
+    if (myFormState.currentState!.validate()) {
+      List<String> ingredients = List.generate(ingredientsControllers.length,
+          (index) => ingredientsControllers[index].text);
+
+      Meal newMeal = Meal(
+          name: mealName.text,
+          path: mealPath.text,
+          listOfIngredient: ingredients);
+      Box dayMealsBox = Hive.box<DayMeals>('dayMeals');
+      DayMeals dayMeals = dayMealsBox.get(receivedDay);
+      dayMeals.meals.add(newMeal);
+
+      dayMealsBox.put(receivedDay, dayMeals);
+      Navigator.pop(context);
+    }
   }
 }
